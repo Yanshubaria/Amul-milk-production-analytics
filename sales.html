@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Sales & Revenue{% endblock %}
+{% block page_title %}Sales & Revenue Analysis{% endblock %}
+{% block page_sub %}Revenue, profit margins, product and region performance{% endblock %}
+
+{% block content %}
+
+<!-- KPI ROW -->
+<div class="kpi-grid" id="sales-kpis">
+  <div class="loading"><div class="spinner"></div>Loading…</div>
+</div>
+
+<!-- CHARTS -->
+<div class="card-grid">
+  <div class="card">
+    <div class="card-title">📈 Cumulative Revenue Growth</div>
+    <img src="/static/charts/chart_cumulative_revenue.png" class="chart-img">
+  </div>
+  <div class="card">
+    <div class="card-title">💹 Profit Margin by Category</div>
+    <img src="/static/charts/chart_profit_margin.png" class="chart-img">
+  </div>
+</div>
+
+<!-- Product Table -->
+<div class="card">
+  <div class="card-title">🏆 Product Performance Leaderboard</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Product</th><th>Revenue</th><th>Profit</th><th>Margin</th><th>Qty Sold</th><th>Performance</th></tr></thead>
+      <tbody id="product-table"><tr><td colspan="7" class="loading">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Category + Region -->
+<div class="card-grid">
+  <div class="card">
+    <div class="card-title">📦 Revenue by Category</div>
+    <div id="cat-sales"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">🗺️ Revenue by Region</div>
+    <div id="region-sales"></div>
+  </div>
+</div>
+
+<!-- Monthly Table -->
+<div class="card">
+  <div class="card-title">📅 Monthly Sales Summary
+    <select id="year-sel" onchange="loadMonthly()" style="margin-left:12px;background:#0f172a;border:1px solid var(--border);color:white;padding:4px 10px;border-radius:6px;font-size:12px">
+      <option value="2023">2023</option><option value="2024" selected>2024</option>
+    </select>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Month</th><th>Revenue (₹)</th><th>Profit (₹)</th><th>Margin</th><th>Units</th></tr></thead>
+      <tbody id="monthly-table"><tr><td colspan="5" class="loading">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const COLORS=['#E8192C','#F7B731','#2196F3','#4CAF50','#9C27B0','#FF9800','#00BCD4','#607D8B'];
+const fmt = n => '₹'+Number(n).toLocaleString('en-IN',{maximumFractionDigits:0});
+const fmtM = n => '₹'+(n/1e6).toFixed(2)+'M';
+
+function bar(label,val,max,color){
+  const pct=(val/max*100).toFixed(1);
+  return `<div style="margin-bottom:13px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:13px">
+      <span>${label}</span><span style="color:${color};font-weight:700">${fmtM(val)}</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${color}"></div></div>
+  </div>`;
+}
+
+async function loadKPIs(){
+  const [yoy, cat] = await Promise.all([
+    fetch('/api/sales/yearly-comparison').then(r=>r.json()),
+    fetch('/api/sales/category-breakdown').then(r=>r.json())
+  ]);
+  const total_rev = yoy.reduce((a,c)=>a+c.revenue,0);
+  const total_pft = yoy.reduce((a,c)=>a+c.profit,0);
+  const avg_mg    = yoy.reduce((a,c)=>a+c.margin,0)/yoy.length;
+  document.getElementById('sales-kpis').innerHTML = `
+    <div class="kpi-card red"><span class="kpi-icon">💰</span>
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value">${fmtM(total_rev)}</div>
+      <div class="kpi-sub">All years combined</div></div>
+    <div class="kpi-card gold"><span class="kpi-icon">📈</span>
+      <div class="kpi-label">Total Profit</div>
+      <div class="kpi-value">${fmtM(total_pft)}</div>
+      <div class="kpi-sub">Net earnings</div></div>
+    <div class="kpi-card green"><span class="kpi-icon">%</span>
+      <div class="kpi-label">Avg Margin</div>
+      <div class="kpi-value">${avg_mg.toFixed(1)}%</div>
+      <div class="kpi-sub">Profit margin</div></div>
+    <div class="kpi-card blue"><span class="kpi-icon">⭐</span>
+      <div class="kpi-label">Top Category</div>
+      <div class="kpi-value" style="font-size:18px">${cat[0].category}</div>
+      <div class="kpi-sub">${fmtM(cat[0].revenue)} revenue</div></div>
+  `;
+}
+
+async function loadProducts(){
+  const data = await fetch('/api/sales/by-product').then(r=>r.json());
+  const maxRev = data[0].revenue;
+  document.getElementById('product-table').innerHTML = data.map((p,i)=>`
+    <tr>
+      <td><strong style="color:${i<3?'var(--gold)':'var(--muted)'}">${i+1}</strong></td>
+      <td><strong>${p.product}</strong></td>
+      <td>${fmtM(p.revenue)}</td>
+      <td style="color:#4ade80">${fmtM(p.profit)}</td>
+      <td><span class="tag ${p.margin>32?'tag-green':p.margin>28?'tag-gold':'tag-red'}">${p.margin.toFixed(1)}%</span></td>
+      <td>${Number(p.qty).toLocaleString()}</td>
+      <td style="width:160px">
+        <div class="progress-bar"><div class="progress-fill" style="width:${(p.revenue/maxRev*100).toFixed(0)}%;background:${COLORS[i%COLORS.length]}"></div></div>
+      </td>
+    </tr>`).join('');
+}
+
+async function loadCatSales(){
+  const data = await fetch('/api/sales/category-breakdown').then(r=>r.json());
+  const max = data[0].revenue;
+  document.getElementById('cat-sales').innerHTML = data.map((c,i)=>bar(c.category,c.revenue,max,COLORS[i])).join('');
+}
+
+async function loadRegionSales(){
+  const data = await fetch('/api/sales/by-region').then(r=>r.json());
+  const max = data[0].revenue;
+  document.getElementById('region-sales').innerHTML = data.map((r,i)=>bar(r.region,r.revenue,max,COLORS[i])).join('');
+}
+
+async function loadMonthly(){
+  const year = document.getElementById('year-sel').value;
+  const data = await fetch(`/api/sales/monthly?year=${year}`).then(r=>r.json());
+  document.getElementById('monthly-table').innerHTML = data.map(m=>`
+    <tr>
+      <td><strong>${m.month}</strong></td>
+      <td>${fmtM(m.revenue)}</td>
+      <td style="color:#4ade80">${fmtM(m.profit)}</td>
+      <td><span class="tag tag-gold">${m.revenue>0?(m.profit/m.revenue*100).toFixed(1):0}%</span></td>
+      <td>${Number(m.quantity).toLocaleString()}</td>
+    </tr>`).join('');
+}
+
+loadKPIs(); loadProducts(); loadCatSales(); loadRegionSales(); loadMonthly();
+</script>
+{% endblock %}

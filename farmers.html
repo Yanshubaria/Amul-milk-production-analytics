@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Farmer Data{% endblock %}
+{% block page_title %}Farmer Procurement Data{% endblock %}
+{% block page_sub %}Milk procurement partners, regional distribution, quality metrics{% endblock %}
+
+{% block content %}
+
+<div class="kpi-grid" id="farmer-kpis">
+  <div class="loading"><div class="spinner"></div>Loading…</div>
+</div>
+
+<div class="card-grid">
+  <div class="card">
+    <div class="card-title">🌍 Procurement by Region</div>
+    <div id="region-bars"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">🥛 Regional Farmer Share</div>
+    <img src="/static/charts/chart_farmer_regions.png" class="chart-img">
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">👨‍🌾 Farmer Directory
+    <div style="display:inline-flex;gap:10px;margin-left:16px">
+      <select id="region-filter" onchange="loadFarmers(1)"
+        style="background:#0f172a;border:1px solid var(--border);color:white;padding:4px 10px;border-radius:6px;font-size:12px">
+        <option value="">All Regions</option>
+        {% for r in ['Gujarat','Maharashtra','Rajasthan','Delhi','Uttar Pradesh','Karnataka','Tamil Nadu','West Bengal'] %}
+        <option value="{{ r }}">{{ r }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Name</th><th>Village</th><th>Region</th><th>Cattle</th><th>Daily Litres</th><th>Fat%</th><th>Protein%</th><th>Years</th><th>Rate/L</th></tr></thead>
+      <tbody id="farmer-table"><tr><td colspan="10" class="loading">Loading…</td></tr></tbody>
+    </table>
+  </div>
+  <div style="display:flex;gap:10px;margin-top:16px;align-items:center" id="pagination"></div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const COLORS=['#E8192C','#F7B731','#2196F3','#4CAF50','#9C27B0','#FF9800','#00BCD4','#607D8B'];
+let currentPage=1;
+
+async function loadKPIs(){
+  const d=await fetch('/api/farmers/summary').then(r=>r.json());
+  document.getElementById('farmer-kpis').innerHTML=`
+    <div class="kpi-card red"><span class="kpi-icon">👨‍🌾</span>
+      <div class="kpi-label">Total Farmers</div>
+      <div class="kpi-value">${d.total_farmers}</div>
+      <div class="kpi-sub">Active partners</div></div>
+    <div class="kpi-card gold"><span class="kpi-icon">🥛</span>
+      <div class="kpi-label">Daily Procurement</div>
+      <div class="kpi-value">${Number(d.total_daily_litres).toLocaleString()}</div>
+      <div class="kpi-sub">Litres per day</div></div>
+    <div class="kpi-card green"><span class="kpi-icon">🧪</span>
+      <div class="kpi-label">Avg Fat %</div>
+      <div class="kpi-value">${d.avg_fat}%</div>
+      <div class="kpi-sub">Quality indicator</div></div>
+    <div class="kpi-card blue"><span class="kpi-icon">💊</span>
+      <div class="kpi-label">Avg Protein %</div>
+      <div class="kpi-value">${d.avg_protein}%</div>
+      <div class="kpi-sub">Nutritional value</div></div>
+    <div class="kpi-card red"><span class="kpi-icon">💰</span>
+      <div class="kpi-label">Avg Payment/L</div>
+      <div class="kpi-value">₹${d.avg_payment_per_litre}</div>
+      <div class="kpi-sub">Farmer payout rate</div></div>
+    <div class="kpi-card gold"><span class="kpi-icon">📅</span>
+      <div class="kpi-label">Avg Tenure</div>
+      <div class="kpi-value">${d.avg_years_with_amul} yrs</div>
+      <div class="kpi-sub">With AMUL</div></div>
+  `;
+}
+
+async function loadRegions(){
+  const data=await fetch('/api/farmers/by-region').then(r=>r.json());
+  const max=data[0].total_litres;
+  document.getElementById('region-bars').innerHTML=data.map((r,i)=>`
+    <div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
+        <span><strong>${r.region}</strong> <span style="color:var(--muted)">(${r.count} farmers)</span></span>
+        <span style="color:${COLORS[i]};font-weight:700">${Number(r.total_litres).toFixed(0)} L/day</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${(r.total_litres/max*100).toFixed(1)}%;background:${COLORS[i]}"></div></div>
+    </div>`).join('');
+}
+
+async function loadFarmers(page=1){
+  currentPage=page;
+  const region=document.getElementById('region-filter').value;
+  const url=`/api/farmers/list?page=${page}&per=15${region?'&region='+encodeURIComponent(region):''}`;
+  const data=await fetch(url).then(r=>r.json());
+  const totalPages=Math.ceil(data.total/15);
+
+  document.getElementById('farmer-table').innerHTML=data.data.map(f=>`
+    <tr>
+      <td><span class="tag tag-blue">${f.farmer_id}</span></td>
+      <td><strong>${f.farmer_name}</strong></td>
+      <td style="color:var(--muted)">${f.village}</td>
+      <td>${f.region}</td>
+      <td>🐄 ${f.cattle_count}</td>
+      <td><strong>${f.avg_daily_litres}</strong> L</td>
+      <td><span class="tag ${f.fat_avg>=4?'tag-green':'tag-gold'}">${f.fat_avg}%</span></td>
+      <td><span class="tag ${f.protein_avg>=3.4?'tag-green':'tag-gold'}">${f.protein_avg}%</span></td>
+      <td>${f.years_with_amul} yrs</td>
+      <td style="color:#4ade80">₹${f.payment_per_litre}/L</td>
+    </tr>`).join('');
+
+  const pg=document.getElementById('pagination');
+  pg.innerHTML=`<span style="color:var(--muted);font-size:13px">Page ${page} of ${totalPages} (${data.total} farmers)</span>
+    ${page>1?`<button class="btn btn-outline" onclick="loadFarmers(${page-1})">← Prev</button>`:''}
+    ${page<totalPages?`<button class="btn btn-red" onclick="loadFarmers(${page+1})">Next →</button>`:''}`;
+}
+
+loadKPIs(); loadRegions(); loadFarmers(1);
+</script>
+{% endblock %}

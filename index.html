@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Executive Dashboard{% endblock %}
+{% block page_sub %}Real-time overview of milk production and sales performance{% endblock %}
+
+{% block content %}
+
+<!-- KPI CARDS -->
+<div class="kpi-grid" id="kpi-grid">
+  <div class="loading"><div class="spinner"></div>Loading KPIs…</div>
+</div>
+
+<!-- CHARTS ROW 1 -->
+<div class="card-grid">
+  <div class="card">
+    <div class="card-title">📈 Monthly Revenue Trend — 2023 vs 2024</div>
+    <img src="/static/charts/chart_revenue_trend.png" class="chart-img" alt="Revenue Trend">
+  </div>
+  <div class="card">
+    <div class="card-title">🍩 Revenue Share by Category</div>
+    <img src="/static/charts/chart_category_donut.png" class="chart-img" alt="Category Donut">
+  </div>
+</div>
+
+<!-- CHARTS ROW 2 -->
+<div class="card-grid">
+  <div class="card">
+    <div class="card-title">🗺️ Region-wise Revenue</div>
+    <img src="/static/charts/chart_region_revenue.png" class="chart-img" alt="Region Revenue">
+  </div>
+  <div class="card">
+    <div class="card-title">📦 Production vs Sales — 2024</div>
+    <img src="/static/charts/chart_prod_vs_sales.png" class="chart-img" alt="Prod vs Sales">
+  </div>
+</div>
+
+<!-- CHARTS ROW 3 -->
+<div class="card-grid">
+  <div class="card">
+    <div class="card-title">🏆 Top Products by Revenue</div>
+    <img src="/static/charts/chart_top_products.png" class="chart-img" alt="Top Products">
+  </div>
+  <div class="card">
+    <div class="card-title">📅 Daily Sales Pattern</div>
+    <img src="/static/charts/chart_weekly_pattern.png" class="chart-img" alt="Weekly Pattern">
+  </div>
+</div>
+
+<!-- YEARLY COMPARISON TABLE -->
+<div class="card">
+  <div class="card-title">📊 Year-on-Year Performance Comparison</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Year</th><th>Revenue (₹M)</th><th>Profit (₹M)</th><th>Qty Sold (M)</th><th>Avg Margin</th><th>Growth</th></tr></thead>
+      <tbody id="yoy-table"><tr><td colspan="6" class="loading">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadKPIs(){
+  const data = await fetch('/api/kpis').then(r=>r.json());
+  const grid = document.getElementById('kpi-grid');
+  grid.innerHTML = `
+    <div class="kpi-card red"><span class="kpi-icon">💰</span>
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value">₹${data.total_revenue_m}M</div>
+      <div class="kpi-sub">2023–2024 combined</div></div>
+    <div class="kpi-card gold"><span class="kpi-icon">📈</span>
+      <div class="kpi-label">Total Profit</div>
+      <div class="kpi-value">₹${data.total_profit_m}M</div>
+      <div class="kpi-sub">Avg margin: ${data.avg_profit_margin}%</div></div>
+    <div class="kpi-card green"><span class="kpi-icon">🥛</span>
+      <div class="kpi-label">Production</div>
+      <div class="kpi-value">${data.total_production_m}M L</div>
+      <div class="kpi-sub">Total litres produced</div></div>
+    <div class="kpi-card blue"><span class="kpi-icon">📦</span>
+      <div class="kpi-label">Units Sold</div>
+      <div class="kpi-value">${data.total_sold_m}M</div>
+      <div class="kpi-sub">Total units dispatched</div></div>
+    <div class="kpi-card red"><span class="kpi-icon">🚀</span>
+      <div class="kpi-label">YoY Growth</div>
+      <div class="kpi-value">${data.yoy_growth_pct}%</div>
+      <div class="kpi-sub">Revenue growth 2023→2024</div></div>
+    <div class="kpi-card gold"><span class="kpi-icon">🌾</span>
+      <div class="kpi-label">Farmers</div>
+      <div class="kpi-value">${data.total_farmers}</div>
+      <div class="kpi-sub">Active procurement partners</div></div>
+    <div class="kpi-card green"><span class="kpi-icon">🏆</span>
+      <div class="kpi-label">Top Region</div>
+      <div class="kpi-value" style="font-size:18px">${data.top_region}</div>
+      <div class="kpi-sub">Highest revenue region</div></div>
+    <div class="kpi-card blue"><span class="kpi-icon">⭐</span>
+      <div class="kpi-label">Top Product</div>
+      <div class="kpi-value" style="font-size:14px;padding-top:8px">${data.top_product}</div>
+      <div class="kpi-sub">Best selling product</div></div>
+  `;
+}
+
+async function loadYoY(){
+  const data = await fetch('/api/sales/yearly-comparison').then(r=>r.json());
+  const prev = data[0]?.revenue || 1;
+  const tbody = document.getElementById('yoy-table');
+  tbody.innerHTML = data.map((r,i) => {
+    const growth = i===0 ? '—' : `+${((r.revenue-prev)/prev*100).toFixed(1)}%`;
+    const gc = i===0 ? '' : 'style="color:#4ade80;font-weight:700"';
+    return `<tr>
+      <td><strong>${r.year}</strong></td>
+      <td>₹${(r.revenue/1e6).toFixed(2)}M</td>
+      <td>₹${(r.profit/1e6).toFixed(2)}M</td>
+      <td>${(r.qty/1e6).toFixed(2)}M</td>
+      <td><span class="tag tag-gold">${r.margin.toFixed(1)}%</span></td>
+      <td ${gc}>${growth}</td>
+    </tr>`;
+  }).join('');
+}
+
+loadKPIs(); loadYoY();
+</script>
+{% endblock %}

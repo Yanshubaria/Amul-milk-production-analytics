@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Annual Reports{% endblock %}
+{% block page_title %}Annual Performance Reports{% endblock %}
+{% block page_sub %}Year-wise detailed analytics and business intelligence{% endblock %}
+
+{% block content %}
+
+<div class="filter-bar">
+  <label style="color:var(--muted);font-size:13px">Select Year:</label>
+  <select id="year-sel" onchange="loadReport()">
+    <option value="2024">2024</option>
+    <option value="2023">2023</option>
+  </select>
+  <button class="btn btn-red" onclick="loadReport()">Generate Report</button>
+</div>
+
+<!-- SUMMARY CARDS -->
+<div class="kpi-grid" id="report-kpis">
+  <div class="loading"><div class="spinner"></div>Generating…</div>
+</div>
+
+<!-- HIGHLIGHT CARDS -->
+<div class="card-grid-3">
+  <div class="card" style="text-align:center">
+    <div style="font-size:42px;margin-bottom:8px">🏆</div>
+    <div class="kpi-label">Best Month</div>
+    <div style="font-size:22px;font-weight:800;color:var(--gold);margin-top:6px" id="best-month">—</div>
+  </div>
+  <div class="card" style="text-align:center">
+    <div style="font-size:42px;margin-bottom:8px">⭐</div>
+    <div class="kpi-label">Best Product</div>
+    <div style="font-size:16px;font-weight:700;color:var(--red);margin-top:6px" id="best-product">—</div>
+  </div>
+  <div class="card" style="text-align:center">
+    <div style="font-size:42px;margin-bottom:8px">🗺️</div>
+    <div class="kpi-label">Best Region</div>
+    <div style="font-size:20px;font-weight:800;color:#4ade80;margin-top:6px" id="best-region">—</div>
+  </div>
+</div>
+
+<!-- Monthly Breakdown -->
+<div class="card">
+  <div class="card-title">📅 Monthly Breakdown</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Month</th><th>Revenue</th><th>Profit</th><th>Units Sold</th><th>Margin</th><th>Revenue Bar</th></tr></thead>
+      <tbody id="monthly-report"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Category Breakdown -->
+<div class="card">
+  <div class="card-title">📦 Category Performance</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Category</th><th>Revenue</th><th>Profit</th><th>Margin</th><th>Share</th></tr></thead>
+      <tbody id="cat-report"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="card-grid">
+  <div class="card">
+    <div class="card-title">📊 Production vs Sales</div>
+    <img src="/static/charts/chart_prod_vs_sales.png" class="chart-img">
+  </div>
+  <div class="card">
+    <div class="card-title">📈 Cumulative Revenue</div>
+    <img src="/static/charts/chart_cumulative_revenue.png" class="chart-img">
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const COLORS=['#E8192C','#F7B731','#2196F3','#4CAF50','#9C27B0','#FF9800','#00BCD4','#607D8B'];
+const fmtM=n=>'₹'+(n/1e6).toFixed(2)+'M';
+const fmt=n=>'₹'+Number(n).toLocaleString('en-IN',{maximumFractionDigits:0});
+
+async function loadReport(){
+  const year=document.getElementById('year-sel').value;
+  const data=await fetch(`/api/reports/annual?year=${year}`).then(r=>r.json());
+
+  document.getElementById('report-kpis').innerHTML=`
+    <div class="kpi-card red"><span class="kpi-icon">💰</span>
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value">${fmtM(data.total_revenue)}</div>
+      <div class="kpi-sub">FY ${year}</div></div>
+    <div class="kpi-card gold"><span class="kpi-icon">📈</span>
+      <div class="kpi-label">Total Profit</div>
+      <div class="kpi-value">${fmtM(data.total_profit)}</div>
+      <div class="kpi-sub">Net earnings</div></div>
+    <div class="kpi-card green"><span class="kpi-icon">🥛</span>
+      <div class="kpi-label">Production</div>
+      <div class="kpi-value">${(data.total_production/1e6).toFixed(1)}M L</div>
+      <div class="kpi-sub">Litres produced</div></div>
+    <div class="kpi-card blue"><span class="kpi-icon">%</span>
+      <div class="kpi-label">Avg Margin</div>
+      <div class="kpi-value">${data.avg_margin}%</div>
+      <div class="kpi-sub">Profit margin</div></div>
+  `;
+
+  document.getElementById('best-month').textContent   = data.best_month;
+  document.getElementById('best-product').textContent = data.best_product;
+  document.getElementById('best-region').textContent  = data.best_region;
+
+  const maxRev=Math.max(...data.monthly.map(m=>m.revenue));
+  document.getElementById('monthly-report').innerHTML=data.monthly.map(m=>`
+    <tr>
+      <td><strong>${m.month}</strong></td>
+      <td>${fmtM(m.revenue)}</td>
+      <td style="color:#4ade80">${fmtM(m.profit)}</td>
+      <td>${Number(m.quantity).toLocaleString()}</td>
+      <td><span class="tag tag-gold">${m.revenue>0?(m.profit/m.revenue*100).toFixed(1):0}%</span></td>
+      <td style="width:30%">
+        <div class="progress-bar"><div class="progress-fill" style="width:${maxRev>0?(m.revenue/maxRev*100).toFixed(0):0}%;background:var(--red)"></div></div>
+      </td>
+    </tr>`).join('');
+
+  const totalRev=data.by_category.reduce((a,c)=>a+c.revenue,0);
+  document.getElementById('cat-report').innerHTML=data.by_category.map((c,i)=>`
+    <tr>
+      <td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${COLORS[i]};margin-right:8px"></span><strong>${c.category}</strong></td>
+      <td>${fmtM(c.revenue)}</td>
+      <td style="color:#4ade80">${fmtM(c.profit)}</td>
+      <td><span class="tag tag-gold">${c.revenue>0?(c.profit/c.revenue*100).toFixed(1):0}%</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${(c.revenue/totalRev*100).toFixed(0)}%;background:${COLORS[i]}"></div></div>
+          <span style="font-size:12px;color:var(--muted);min-width:40px">${(c.revenue/totalRev*100).toFixed(1)}%</span>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+loadReport();
+</script>
+{% endblock %}

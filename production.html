@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Production Analysis{% endblock %}
+{% block page_title %}Milk Production Analysis{% endblock %}
+{% block page_sub %}Production volumes, quality grades, seasonal trends{% endblock %}
+
+{% block content %}
+
+<!-- FILTER -->
+<div class="filter-bar">
+  <label style="color:var(--muted);font-size:13px">Filter Year:</label>
+  <select id="year-filter" onchange="loadAll()">
+    <option value="all">All Years</option>
+    <option value="2023">2023</option>
+    <option value="2024">2024</option>
+  </select>
+</div>
+
+<!-- KPI ROW -->
+<div class="kpi-grid" id="prod-kpis">
+  <div class="loading"><div class="spinner"></div>Loading…</div>
+</div>
+
+<!-- CHARTS -->
+<div class="card-grid">
+  <div class="card">
+    <div class="card-title">🌡️ Seasonal Production Heatmap</div>
+    <img src="/static/charts/chart_seasonal_heatmap.png" class="chart-img">
+  </div>
+  <div class="card">
+    <div class="card-title">📊 Production by Category</div>
+    <div id="cat-chart" class="loading"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- Monthly Production Table -->
+<div class="card">
+  <div class="card-title">📅 Monthly Production Summary</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Month</th><th>Production (L)</th><th>Share</th><th>Visual</th></tr></thead>
+      <tbody id="monthly-table"><tr><td colspan="4" class="loading">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Region + Quality -->
+<div class="card-grid">
+  <div class="card">
+    <div class="card-title">🗺️ Production by Region</div>
+    <div id="region-bars"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">⭐ Quality Grade Distribution</div>
+    <div id="quality-bars"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const COLORS = ['#E8192C','#F7B731','#2196F3','#4CAF50','#9C27B0','#FF9800','#00BCD4','#607D8B'];
+
+function bar(label, value, max, color, suffix='L'){
+  const pct = (value/max*100).toFixed(1);
+  return `<div style="margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:13px">
+      <span>${label}</span><span style="color:${color};font-weight:700">${Number(value).toLocaleString()} ${suffix}</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${color}"></div></div>
+  </div>`;
+}
+
+async function loadKPIs(){
+  const cat = await fetch('/api/production/by-category').then(r=>r.json());
+  const total = cat.reduce((a,c)=>a+c.quantity,0);
+  document.getElementById('prod-kpis').innerHTML = `
+    <div class="kpi-card red"><span class="kpi-icon">🥛</span>
+      <div class="kpi-label">Total Production</div>
+      <div class="kpi-value">${(total/1e6).toFixed(1)}M</div>
+      <div class="kpi-sub">Litres produced</div></div>
+    <div class="kpi-card gold"><span class="kpi-icon">🧈</span>
+      <div class="kpi-label">Top Category</div>
+      <div class="kpi-value" style="font-size:18px">${cat[0].category}</div>
+      <div class="kpi-sub">${(cat[0].quantity/1e6).toFixed(1)}M litres</div></div>
+    <div class="kpi-card green"><span class="kpi-icon">📦</span>
+      <div class="kpi-label">Categories</div>
+      <div class="kpi-value">${cat.length}</div>
+      <div class="kpi-sub">Product categories</div></div>
+    <div class="kpi-card blue"><span class="kpi-icon">🌍</span>
+      <div class="kpi-label">Regions</div>
+      <div class="kpi-value">8</div>
+      <div class="kpi-sub">Production regions</div></div>
+  `;
+
+  // Category chart as HTML bars
+  const max = cat[0].quantity;
+  document.getElementById('cat-chart').innerHTML = cat.map((c,i)=>
+    bar(c.category, c.quantity, max, COLORS[i])
+  ).join('');
+}
+
+async function loadMonthly(){
+  const year = document.getElementById('year-filter').value;
+  const url = year==='all' ? '/api/production/monthly' : `/api/production/monthly?year=${year}`;
+  const data = await fetch(url).then(r=>r.json());
+  const max = Math.max(...data.map(d=>d.quantity));
+  document.getElementById('monthly-table').innerHTML = data.map(d=>`
+    <tr>
+      <td><strong>${d.month}</strong></td>
+      <td>${Number(d.quantity).toLocaleString()}</td>
+      <td><span class="tag tag-blue">${(d.quantity/max*100).toFixed(1)}%</span></td>
+      <td style="width:40%">
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:${(d.quantity/max*100).toFixed(1)}%;background:var(--red)"></div>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+async function loadRegion(){
+  const data = await fetch('/api/production/by-region').then(r=>r.json());
+  const max = data[0].quantity;
+  document.getElementById('region-bars').innerHTML = data.map((r,i)=>
+    bar(r.region, r.quantity, max, COLORS[i])
+  ).join('');
+}
+
+async function loadQuality(){
+  const data = await fetch('/api/production/quality').then(r=>r.json());
+  const total = data.reduce((a,c)=>a+c.quantity,0);
+  const qColors = {'Grade A':'#4ade80','Grade B':' #F7B731','Grade C':'#E8192C'};
+  document.getElementById('quality-bars').innerHTML = data.map(q=>`
+    <div style="margin-bottom:18px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:14px">
+        <span style="font-weight:700;color:${qColors[q.grade]||'white'}">${q.grade}</span>
+        <span>${(q.quantity/total*100).toFixed(1)}% — ${(q.quantity/1e6).toFixed(1)}M L</span>
+      </div>
+      <div class="progress-bar" style="height:14px">
+        <div class="progress-fill" style="width:${(q.quantity/total*100).toFixed(1)}%;background:${qColors[q.grade]||'#888'}"></div>
+      </div>
+    </div>`).join('');
+}
+
+function loadAll(){ loadMonthly(); }
+loadKPIs(); loadMonthly(); loadRegion(); loadQuality();
+</script>
+{% endblock %}
