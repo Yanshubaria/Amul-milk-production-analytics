@@ -162,14 +162,14 @@ cd amul-milk-production-analytics
 
 ### 2. Create a Virtual Environment
 
-For Windows:
+#### Windows
 
 ```bash
 python -m venv venv
 venv\Scripts\activate
 ```
 
-For macOS or Linux:
+#### macOS or Linux
 
 ```bash
 python3 -m venv venv
@@ -238,13 +238,15 @@ http://localhost:5050
 
 ## 🪟 Running on Windows
 
-Windows users can also run the application using:
+Windows users can also run the application using the included batch file.
+
+Double-click:
 
 ```text
 run_project.bat
 ```
 
-Double-click the file or execute it through Command Prompt:
+You can also execute it through Command Prompt:
 
 ```bash
 run_project.bat
@@ -358,31 +360,31 @@ The project generates the following charts:
 
 ## 🔎 Example API Requests
 
-Retrieve all dashboard KPIs:
+### Retrieve All Dashboard KPIs
 
 ```text
 http://localhost:5050/api/kpis
 ```
 
-Retrieve production data for 2024:
+### Retrieve Production Data for 2024
 
 ```text
 http://localhost:5050/api/production/monthly?year=2024
 ```
 
-Retrieve the top five products:
+### Retrieve the Top Five Products
 
 ```text
 http://localhost:5050/api/sales/top-products?n=5
 ```
 
-Retrieve the first page of farmer records:
+### Retrieve the First Page of Farmer Records
 
 ```text
 http://localhost:5050/api/farmers/list?page=1&per=20
 ```
 
-Retrieve the annual report for 2023:
+### Retrieve the Annual Report for 2023
 
 ```text
 http://localhost:5050/api/reports/annual?year=2023
@@ -436,5 +438,8 @@ Before applying an open-source license, ensure that all source code, datasets, i
 ## 📬 Contact
 
 **Yanshu Baria**
-Computer Science
-**Mukesh Patel School of Technology Management and Engineering**
+**Program:** Computer Science
+**Institution:** Mukesh Patel School of Technology Management and Engineering
+**University:** SVKM's NMIMS
+
+---
