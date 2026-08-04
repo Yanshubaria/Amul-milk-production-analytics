@@ -4,6 +4,19 @@ A complete data analytics web application for analyzing AMUL milk production, pr
 
 ---
 
+## 👩‍💻 Project Information
+
+**Developed by:** Yanshu Baria<br>
+**Enrollment Number:** 70552300076<br>
+**Program:** Computer Science<br>
+**College:** SVKM's NMIMS<br>
+**School:** Mukesh Patel School of Technology Management and Engineering<br>
+**Internship Organization:** The Kaira Co-operative Milk Producers' Union Limited — AMUL<br>
+**Location:** Anand, Gujarat, India<br>
+**Internship Duration:** 26 December 2025 – 14 April 2026
+
+---
+
 ## 📋 Project Overview
 
 The **AMUL Milk Production & Sales Analyst System** is a Flask-based data analytics web application developed to analyze dairy production and sales operations.
@@ -238,7 +251,7 @@ http://localhost:5050
 
 ## 🪟 Running on Windows
 
-Windows users can also run the application using the included batch file.
+Windows users can run the application using the included batch file.
 
 Double-click:
 
@@ -246,7 +259,7 @@ Double-click:
 run_project.bat
 ```
 
-You can also execute it through Command Prompt:
+You can also execute the file through Command Prompt:
 
 ```bash
 run_project.bat
@@ -412,7 +425,9 @@ The primary objectives of this project are:
 
 The data used in this project is generated for educational, analytical, and demonstration purposes.
 
-This repository is not an official AMUL software product. The generated records should not be interpreted as AMUL's actual confidential production, sales, financial, or farmer data.
+This repository is not an official AMUL software product.
+
+The generated records should not be interpreted as AMUL's actual confidential production, sales, financial, or farmer data.
 
 AMUL product names and trademarks belong to their respective owner.
 
@@ -420,10 +435,11 @@ AMUL product names and trademarks belong to their respective owner.
 
 ## 👩‍🎓 Academic Information
 
-**Student:** Yanshu Baria
-**Enrollment Number:** 70552300076
-**Program:** Computer Science
-**College:** SVKM's NMIMS
+**Student:** Yanshu Baria<br>
+**Enrollment Number:** 70552300076<br>
+**Program:** Computer Science<br>
+**Institution:** Mukesh Patel School of Technology Management and Engineering<br>
+**University:** SVKM's NMIMS
 
 ---
 
@@ -437,9 +453,9 @@ Before applying an open-source license, ensure that all source code, datasets, i
 
 ## 📬 Contact
 
-**Yanshu Baria**
-**Program:** Computer Science
-**Institution:** Mukesh Patel School of Technology Management and Engineering
+**Yanshu Baria**<br>
+**Program:** Computer Science<br>
+**Institution:** Mukesh Patel School of Technology Management and Engineering<br>
 **University:** SVKM's NMIMS
 
 ---
